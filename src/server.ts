@@ -16,16 +16,21 @@ const app = express();
 app.use(helmet());
 app.use(cors({
     origin: (origin, callback) => {
-        
         if (!origin) return callback(null, true);
 
-        
-        const localhostPattern = /^http:\/\/([a-z0-9-]+\.)?localhost:5173$/;
+        const rootDomain = process.env.ROOT_DOMAIN;
+        // Escape special characters for regex
+        const escapedRootDomain = rootDomain?.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-        
-        const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || [];
+        // Create regex pattern to match the root domain and any subdomains
+        // Matches http:// and https:// and optional subdomains
+        const originPattern = escapedRootDomain
+            ? new RegExp(`^https?:\\/\\/([a-z0-9-]+\\.)?${escapedRootDomain}$`)
+            : null;
 
-        if (localhostPattern.test(origin) || allowedOrigins.includes(origin)) {
+        const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
+
+        if ((originPattern && originPattern.test(origin)) || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -36,8 +41,8 @@ app.use(cors({
 }));
 app.use(
     rateLimit({
-        windowMs: 15 * 60 * 1000, 
-        max: 100, 
+        windowMs: 15 * 60 * 1000,
+        max: 100,
         standardHeaders: true,
         legacyHeaders: false,
     })
