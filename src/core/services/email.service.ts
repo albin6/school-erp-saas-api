@@ -8,7 +8,7 @@ class EmailService {
         this.transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'smtp.gmail.com',
             port: parseInt(process.env.SMTP_PORT || '587'),
-            secure: false, 
+            secure: false,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASSWORD,
@@ -16,14 +16,14 @@ class EmailService {
         });
     }
 
-     
+
     async sendTenantAdminCredentials(
         email: string,
         tenantName: string,
         subdomain: string,
         temporaryPassword: string
     ): Promise<void> {
-        const loginUrl = `http://${subdomain}.${process.env.ROOT_DOMAIN || 'localhost:5173'}/admin`;
+        const loginUrl = `${process.env.PROTOCOL || 'http'}://${subdomain}.${process.env.ROOT_DOMAIN || 'localhost:5173'}/admin`;
 
         const mailOptions = {
             from: process.env.SMTP_FROM || 'noreply@schoolmanagement.com',
@@ -99,7 +99,7 @@ School Management Team
         }
     }
 
-     
+
     async sendOTPEmail(email: string, otp: string, expiresAt: Date): Promise<void> {
         const expiryMinutes = Math.floor((expiresAt.getTime() - Date.now()) / 60000);
 
@@ -171,7 +171,7 @@ Never share this OTP with anyone.
         }
     }
 
-     
+
     async sendPasswordResetConfirmation(email: string, tenantName: string): Promise<void> {
         const mailOptions = {
             from: process.env.SMTP_FROM || 'noreply@schoolmanagement.com',
@@ -210,11 +210,11 @@ Never share this OTP with anyone.
             console.log(`✅ Password reset confirmation sent to ${email}`);
         } catch (error) {
             console.error('❌ Failed to send confirmation email:', error);
-            
+
         }
     }
 
-     
+
     async verifyConnection(): Promise<boolean> {
         try {
             await this.transporter.verify();

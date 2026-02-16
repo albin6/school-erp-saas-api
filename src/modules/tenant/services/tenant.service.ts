@@ -5,29 +5,29 @@ import { Op } from "sequelize";
 
 export class TenantService {
 
-    
+
     static async createTenant(data: CreateTenantDTO, createdBy: string) {
         const { generateTemporaryPassword } = require("../../../core/utils/password.utils");
         const { hashPassword } = require("../../../core/security/password.service");
         const { emailService } = require("../../../core/services/email.service");
 
-        
+
         const existing = await Tenant.findOne({ where: { subdomain: data.subdomain } });
         if (existing) {
             throw new AppError("Subdomain already exists", 409);
         }
 
-        
+
         const existingUser = await User.findOne({ where: { email: data.admin_email } });
         if (existingUser) {
             throw new AppError("Admin email already exists", 409);
         }
 
-        
+
         const temporaryPassword = generateTemporaryPassword();
         const hashedPassword = await hashPassword(temporaryPassword);
 
-        
+
         console.log(`\n${'='.repeat(60)}`);
         console.log(`🔑 TENANT ADMIN CREDENTIALS`);
         console.log(`${'='.repeat(60)}`);
@@ -35,10 +35,10 @@ export class TenantService {
         console.log(`Subdomain: ${data.subdomain}`);
         console.log(`Admin Email: ${data.admin_email}`);
         console.log(`Temporary Password: ${temporaryPassword}`);
-        console.log(`Login URL: http://${data.subdomain}.localhost:5173/admin`);
+        console.log(`Login URL: ${process.env.PROTOCOL || 'http'}://${data.subdomain}.${process.env.ROOT_DOMAIN || 'localhost:5173'}/admin`);
         console.log(`${'='.repeat(60)}\n`);
 
-        
+
         const tenant = await Tenant.create({
             name: data.name,
             subdomain: data.subdomain,
@@ -47,17 +47,17 @@ export class TenantService {
             created_by: createdBy,
         });
 
-        
+
         const adminUser = await User.create({
             email: data.admin_email,
             password_hash: hashedPassword,
             name: `${data.name} Admin`,
             is_super_admin: false,
             is_active: true,
-            must_reset_password: true, 
+            must_reset_password: true,
         });
 
-        
+
         await TenantUser.create({
             user_id: adminUser.id,
             tenant_id: tenant.id,
@@ -65,7 +65,7 @@ export class TenantService {
             sub_role: null,
         });
 
-        
+
         try {
             await emailService.sendTenantAdminCredentials(
                 data.admin_email,
@@ -76,7 +76,7 @@ export class TenantService {
             console.log(`✅ Credentials email sent to ${data.admin_email}`);
         } catch (emailError) {
             console.error('⚠️ Failed to send credentials email:', emailError);
-            
+
         }
 
         return {
@@ -89,7 +89,7 @@ export class TenantService {
         };
     }
 
-    
+
     static async getTenants(query: TenantQueryDTO) {
         const { page, limit, search, status, sortBy, sortOrder } = query;
         const offset = (page - 1) * limit;
@@ -125,7 +125,7 @@ export class TenantService {
         };
     }
 
-    
+
     static async getTenantById(id: string) {
         const tenant = await Tenant.findByPk(id);
         if (!tenant) {
@@ -134,7 +134,7 @@ export class TenantService {
         return tenant;
     }
 
-    
+
     static async getTenantBySubdomain(subdomain: string) {
         const tenant = await Tenant.findOne({ where: { subdomain } });
         if (!tenant) {
@@ -143,7 +143,7 @@ export class TenantService {
         return tenant;
     }
 
-    
+
     static async checkAvailability(subdomain: string, excludeId?: string) {
         const where: any = { subdomain };
 
@@ -158,21 +158,21 @@ export class TenantService {
         };
     }
 
-    
+
     static async updateTenant(id: string, data: UpdateTenantDTO) {
         const tenant = await this.getTenantById(id);
         await tenant.update(data);
         return tenant;
     }
 
-    
+
     static async deleteTenant(id: string) {
         const transaction = await Tenant.sequelize!.transaction();
 
         try {
             const tenant = await this.getTenantById(id);
 
-            
+
             const tenantUsers = await TenantUser.findAll({
                 where: { tenant_id: id },
                 attributes: ['user_id'],
@@ -180,16 +180,16 @@ export class TenantService {
             });
             const userIds = tenantUsers.map(tu => tu.user_id);
 
-            
+
             await TenantUser.destroy({
                 where: { tenant_id: id },
                 transaction
             });
 
-            
-            
-            
-            
+
+
+
+
             if (userIds.length > 0) {
                 await User.destroy({
                     where: { id: userIds },
@@ -197,7 +197,7 @@ export class TenantService {
                 });
             }
 
-            
+
             await tenant.destroy({ transaction });
 
             await transaction.commit();
@@ -208,7 +208,7 @@ export class TenantService {
         }
     }
 
-    
+
     static async blockTenant(id: string) {
         const tenant = await this.getTenantById(id);
         await tenant.update({
@@ -218,7 +218,7 @@ export class TenantService {
         return { message: "Tenant blocked successfully", tenant };
     }
 
-    
+
     static async unblockTenant(id: string) {
         const tenant = await this.getTenantById(id);
         await tenant.update({
@@ -228,7 +228,7 @@ export class TenantService {
         return { message: "Tenant unblocked successfully", tenant };
     }
 
-    
+
     static async getTenantUsers(tenantId: string, query: { page: number; limit: number; role?: string }) {
         const { page, limit, role } = query;
         const offset = (page - 1) * limit;
