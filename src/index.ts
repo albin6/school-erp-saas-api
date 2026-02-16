@@ -5,6 +5,7 @@ import app from "./server";
 import { connectDB } from "./infrastructure/database/sequelize";
 import { initModels } from "./infrastructure/database/models";
 import { connectRedis } from "./infrastructure/redis/redis.client";
+import { seedSuperAdmin } from "./core/utils/seed-super-admin";
 
 const PORT = process.env.PORT || 3000;
 
@@ -13,6 +14,7 @@ const PORT = process.env.PORT || 3000;
         console.log("🚀 Starting server...");
         await connectDB();
         await initModels();
+        await seedSuperAdmin();
         await connectRedis();
 
         app.listen(PORT, () => {
