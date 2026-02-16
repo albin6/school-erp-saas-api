@@ -9,11 +9,13 @@ import TenantAuthRoutes from "./modules/auth/routes/tenant-auth.routes";
 import PasswordResetOTPRoutes from "./modules/auth/routes/password-reset-otp.routes";
 import { tenantRoutes } from "./modules/tenant";
 import { errorHandler } from "./core/middleware/error.middleware";
+import { requestLogger } from "./core/middleware/request-logger.middleware";
 
 const app = express();
 
 
 app.use(helmet());
+app.use(requestLogger);
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
